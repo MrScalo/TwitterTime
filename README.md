@@ -1,4 +1,4 @@
-![banner](https://raw.githubusercontent.com/MrScalo/TwitterTime/main/.github/twittertime-banner.png)
+![banner](https://raw.githubusercontent.com/MrScalo/TwitterTime/main/.github/twittertime-banner2.png)
 
 ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/mrscalo/TwitterTime/Rust?label=BUILD&logo=rust&style=flat-square) ![GitHub](https://img.shields.io/github/license/mrscalo/TwitterTime?label=LICENSE&logo=github&style=flat-square)
 
