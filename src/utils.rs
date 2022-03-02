@@ -2,7 +2,7 @@ use std::env;
 use chrono::Datelike;
 
 use super::week::Week;
-use super::week::WeekAndNext;
+use super::week::WeekMeta;
 
 #[tokio::main]
 async fn request_time_offset(city: &str) -> Result<i8, Box<dyn std::error::Error>> {
@@ -61,12 +61,12 @@ async fn request_user_id(name: &str) -> Result<String, Box<dyn std::error::Error
 }
 
 #[tokio::main]
-async fn request_tweets(user_id: &str, pagination_token: String, time_offset: i8) -> Result<WeekAndNext, Box<dyn std::error::Error>> {
+async fn request_tweets(user_id: &str, pagination_token: String, time_offset: i8, week_amount: i8) -> Result<WeekMeta, Box<dyn std::error::Error>> {
 
     let token = env::var("BEARER_TOKEN").expect("BEARER_TOKEN not found");
     let auth: String = format!("Bearer {}", token);
     let date = chrono::Utc::now();
-    let date = date.checked_sub_signed(chrono::Duration::days(28)).unwrap().format("%Y-%m-%dT%H:%M:%S.000Z").to_string();
+    let date = date.checked_sub_signed(chrono::Duration::weeks(week_amount as i64)).unwrap().format("%Y-%m-%dT%H:%M:%S.000Z").to_string();
 
     let url: String;
     if pagination_token.is_empty() {
@@ -86,12 +86,16 @@ async fn request_tweets(user_id: &str, pagination_token: String, time_offset: i8
 
     let json: serde_json::Value = serde_json::from_str(&res)?;
 
-    let mut week_and_next = WeekAndNext::new();
+    let mut week_meta = WeekMeta::new();
     
     if json["data"].is_null() {
-        return Ok(week_and_next);
+        return Ok(week_meta);
     }
     let data = json["data"].as_array().unwrap();
+    if !data.is_empty() {
+        week_meta.last_date = data.last().unwrap()["created_at"].as_str().unwrap().to_string();
+    }
+
     for object in data.iter() {
         let date = chrono::DateTime::parse_from_rfc3339(object["created_at"].as_str().unwrap()).unwrap();
         let date = date + chrono::Duration::hours(time_offset as i64);
@@ -99,25 +103,25 @@ async fn request_tweets(user_id: &str, pagination_token: String, time_offset: i8
 
         let time: String = date.format("%H:%M").to_string();
         match weekday {
-            chrono::Weekday::Mon => week_and_next.week.monday.push(time),
-            chrono::Weekday::Tue => week_and_next.week.tuesday.push(time),
-            chrono::Weekday::Wed => week_and_next.week.wednesday.push(time),
-            chrono::Weekday::Thu => week_and_next.week.thursday.push(time),
-            chrono::Weekday::Fri => week_and_next.week.friday.push(time),
-            chrono::Weekday::Sat => week_and_next.week.saturday.push(time),
-            chrono::Weekday::Sun => week_and_next.week.sunday.push(time)
+            chrono::Weekday::Mon => week_meta.week.monday.push(time),
+            chrono::Weekday::Tue => week_meta.week.tuesday.push(time),
+            chrono::Weekday::Wed => week_meta.week.wednesday.push(time),
+            chrono::Weekday::Thu => week_meta.week.thursday.push(time),
+            chrono::Weekday::Fri => week_meta.week.friday.push(time),
+            chrono::Weekday::Sat => week_meta.week.saturday.push(time),
+            chrono::Weekday::Sun => week_meta.week.sunday.push(time)
         }
     }
 
     if !json["meta"]["next_token"].is_null() {
-        week_and_next.next = json["meta"]["next_token"].as_str().unwrap().to_string();
+        week_meta.next = json["meta"]["next_token"].as_str().unwrap().to_string();
     }
 
-    Ok(week_and_next)
+    Ok(week_meta)
 }
 
-pub fn month_tweet_times(user: &str, city: &str) -> Option<Week> {
-    let mut week_and_next = WeekAndNext::new();
+pub fn month_tweet_times(user: &str, city: &str, week_amount: i8) -> Option<WeekMeta> {
+    let mut week_meta = WeekMeta::new();
 
     let user_id: String;
     if let Ok(res) = request_user_id(user) {
@@ -143,26 +147,28 @@ pub fn month_tweet_times(user: &str, city: &str) -> Option<Week> {
     }
 
     loop {
-        if let Ok(mut next) = request_tweets(&user_id, week_and_next.next, time_offset) {
-            week_and_next.next = next.next;
-            week_and_next.week.monday.append(&mut next.week.monday);
-            week_and_next.week.tuesday.append(&mut next.week.tuesday);
-            week_and_next.week.wednesday.append(&mut next.week.wednesday);
-            week_and_next.week.thursday.append(&mut next.week.thursday);
-            week_and_next.week.friday.append(&mut next.week.friday);
-            week_and_next.week.saturday.append(&mut next.week.saturday);
-            week_and_next.week.sunday.append(&mut next.week.sunday);
+        if let Ok(mut next) = request_tweets(&user_id, week_meta.next.clone(), time_offset, week_amount) {
+            week_meta.next = next.next;
+            week_meta.last_date = next.last_date;
+
+            week_meta.week.monday.append(&mut next.week.monday);
+            week_meta.week.tuesday.append(&mut next.week.tuesday);
+            week_meta.week.wednesday.append(&mut next.week.wednesday);
+            week_meta.week.thursday.append(&mut next.week.thursday);
+            week_meta.week.friday.append(&mut next.week.friday);
+            week_meta.week.saturday.append(&mut next.week.saturday);
+            week_meta.week.sunday.append(&mut next.week.sunday);
         } else {
             println!("Error getting tweets");
             break;
         }
 
-        if week_and_next.next.is_empty() { break; }
+        if week_meta.next.is_empty() { break; }
     }
 
-    week_and_next.week.sort();
+    week_meta.week.sort();
 
-    Some(week_and_next.week)
+    Some(week_meta)
 }
 
 pub fn active_time(week: Week) -> Week {
@@ -275,4 +281,34 @@ fn print_week_helper(day: &str, times: Vec<String>) {
 
 pub fn skip() {
     println!("");
+}
+
+pub fn week_amount_to_int(amount: String) -> i8 {
+    let mut week_amount_num: i8 = match amount.trim().parse() {
+        Ok(num) => num,
+        Err(_) => {
+            skip();
+            println!("--> Error parsing week amount. Defaulting to 1 week.");
+            1
+        }
+    };
+
+    if week_amount_num < 1 || week_amount_num > 52 {
+        skip();
+        println!("--> Week amount must be between 1 and 52. Defaulting to 1 week.");
+        week_amount_num = 1;
+    }
+
+    week_amount_num
+}
+
+pub fn week_diff(end: &str) -> i8 {
+    let start_date = chrono::Local::now();
+    let end_date = chrono::DateTime::parse_from_rfc3339(end).unwrap();
+
+    let diff = start_date.signed_duration_since(end_date);
+
+    let weeks = diff.num_weeks();
+
+    weeks as i8
 }
