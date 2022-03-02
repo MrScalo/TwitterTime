@@ -32,16 +32,18 @@ impl Week {
     } 
 }
 
-pub struct WeekAndNext {
+pub struct WeekMeta {
     pub week: Week,
     pub next: String,
+    pub last_date: String,
 }
 
-impl WeekAndNext {
-    pub fn new() -> WeekAndNext {
-        WeekAndNext {
+impl WeekMeta {
+    pub fn new() -> WeekMeta {
+        WeekMeta {
             week: Week::new(),
             next: String::new(),
+            last_date: String::new(),
         }
     }
 }
