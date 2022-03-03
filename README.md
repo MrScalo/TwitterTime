@@ -49,7 +49,7 @@ cargo build --release
 
 ## Usage
 
-<img src="https://raw.githubusercontent.com/MrScalo/TwitterTime/variable_weeks/.github/twittertime-input-example.png" width="600">
+<img src="https://raw.githubusercontent.com/MrScalo/TwitterTime/main/.github/twittertime-input-example.png" width="600">
 
 ## License
 
