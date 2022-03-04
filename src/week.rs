@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 pub struct Week {
     pub monday: Vec<String>,
     pub tuesday: Vec<String>,
@@ -36,6 +38,7 @@ pub struct WeekMeta {
     pub week: Week,
     pub next: String,
     pub last_date: String,
+    pub platforms: HashMap<String, u16>,
 }
 
 impl WeekMeta {
@@ -44,6 +47,7 @@ impl WeekMeta {
             week: Week::new(),
             next: String::new(),
             last_date: String::new(),
+            platforms: HashMap::new(),
         }
     }
 }

@@ -111,6 +111,10 @@ async fn request_tweets(user_id: &str, pagination_token: String, time_offset: i8
             chrono::Weekday::Sat => week_meta.week.saturday.push(time),
             chrono::Weekday::Sun => week_meta.week.sunday.push(time)
         }
+
+        let platform_value = object["source"].as_str().unwrap().to_string();
+        let platform = week_meta.platforms.entry(platform_value).or_insert(0);
+        *platform += 1;
     }
 
     if !json["meta"]["next_token"].is_null() {
@@ -150,6 +154,10 @@ pub fn month_tweet_times(user: &str, city: &str, week_amount: i8) -> Option<Week
         if let Ok(mut next) = request_tweets(&user_id, week_meta.next.clone(), time_offset, week_amount) {
             week_meta.next = next.next;
             week_meta.last_date = next.last_date;
+            for (key, value) in next.platforms.iter() {
+                let platform = week_meta.platforms.entry(key.clone()).or_insert(0);
+                *platform += *value;
+            }
 
             week_meta.week.monday.append(&mut next.week.monday);
             week_meta.week.tuesday.append(&mut next.week.tuesday);
