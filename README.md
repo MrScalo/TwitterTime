@@ -14,6 +14,7 @@ Interesting statistics of a Twitter user. Including his most active time.
 
 At the moment all statistics are from the last 4 weeks.
 - Amount of tweets
+- Prefered platform
 - Time span per weekday with the most tweets
 
 Many more coming soon...
