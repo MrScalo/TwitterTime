@@ -42,12 +42,17 @@ fn main() {
         println!("So here are the statistics for the maximum amount of tweets you can get.");
         week_amount_num = utils::week_diff(week_meta.last_date.as_str());
     }
+    
+    let platform = week_meta.platforms.iter().max_by_key(|&(_, v)| v).unwrap().0;
 
     skip();skip();
     println!("--- Statistics for the last {} week{} ---", week_amount_num, if week_amount_num == 1 { "" } else { "s" });
     skip();
     
     println!("Amount of tweets: {}", amount);
+    skip();
+
+    println!("Prefered platform: {}", platform);
     skip();
 
     let week_active = utils::active_time(week);
